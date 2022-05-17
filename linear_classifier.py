@@ -18,6 +18,10 @@ inputs = np.vstack((a,b)).astype("float32")
 
 labels = np.vstack((np.ones((dataset_size//2,1), dtype="float32"), np.zeros((dataset_size//2,1), dtype="float32")))
 
+def square_loss(targets, predictions):
+    per_sample_losses = tf.square(targets - predictions)
+    return tf.reduce_mean(per_sample_losses)
+
 class linear_model:
     def __init__(self, learn_rate=0.1, input_dim=2, output_dim=1):
         self.W = tf.Variable(initial_value=tf.random.uniform(shape=(input_dim,output_dim)))
@@ -27,15 +31,11 @@ class linear_model:
     def forward_pass(self, inputs):
         outputs = tf.matmul(inputs, self.W) + self.b
         return outputs
-    
-    def square_loss(targets, predictions):
-        per_sample_losses = tf.square(targets-predictions)
-        return tf.reduce_mean(per_sample_losses)
 
     def train_step(self, inputs, targets):
         with tf.GradientTape() as tape:                                         #open tape to record computation graph
             predictions = self.forward_pass(inputs)
-            loss = self.square_loss(targets, predictions)
+            loss = square_loss(targets, predictions)
         loss_wrt_W, loss_wrt_b = tape.gradient(loss, (self.W, self.b))          #retrieve gradients from tape
         self.W.assign_sub(loss_wrt_W * self.learn_rate)
         self.b.assign_sub(loss_wrt_b * self.learn_rate)
@@ -44,3 +44,17 @@ class linear_model:
     def get_weights(self):
         return self.W, self.b
 
+num_steps = 30
+
+model = linear_model()
+
+for step in range(num_steps):
+    loss = model.train_step(inputs, labels)
+    print(f"loss at step {step}: {loss:.4f}")
+
+weightW, weightb = model.get_weights()
+
+predictions = model.forward_pass(inputs)
+
+plt.scatter(inputs[:,0], inputs[:,1], c=predictions[:,0] > 0.5)
+plt.show()
